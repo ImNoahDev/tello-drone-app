@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tello Drone Control</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .hidden { display: none; }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center h-screen bg-gray-100">
+    <h1 class="text-3xl font-bold mb-6">Control Your Tello Drones</h1>
+    
+    <!-- Default Interface -->
+    <div id="default-interface" class="flex flex-col items-center space-y-4">
+        <div class="space-x-4">
+            <button class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-700" onclick="sendCommand('takeoff')">Takeoff</button>
+            <button class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-700" onclick="sendCommand('land')">Land</button>
+        </div>
+        <div class="grid grid-cols-3 gap-4">
+            <button class="bg-gray-500 text-white p-4 rounded hover:bg-gray-700 col-span-3" onclick="move('forwad')">↑</button>
+            <button class="bg-gray-500 text-white p-4 rounded hover:bg-gray-700" onclick="move('left')">←</button>
+            <button class="bg-gray-500 text-white p-4 rounded hover:bg-gray-700" disabled>●</button>
+            <button class="bg-gray-500 text-white p-4 rounded hover:bg-gray-700" onclick="move('right')">→</button>
+            <button class="bg-gray-500 text-white p-4 rounded hover:bg-gray-700 col-span-3" onclick="move('back')">↓</button>
+        </div>
+        <div class="space-x-4">
+            <button class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-700" onclick="move('up')">up</button>
+            <button class="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-700" onclick="move('down')">down</button>
+        </div>
+        <div class="space-x-4">
+            <button class="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-700" onclick="flip('right')">Flip Right</button>
+            <button class="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-700" onclick="flip('left')">Flip Left</button>
+        </div>
+        <div class="space-x-4">
+            <button class="bg-indigo-500 text-white px-4 py-2 rounded hover:bg-indigo-700" onclick="sendCommand('emergency')">Emergency Stop</button>
+        </div>
+    </div>
+
+    <!-- Admin Interface -->
+    <div id="admin-interface" class="hidden flex flex-col items-center space-y-4">
+        <div>
+            <h2 class="text-2xl font-bold mb-4">Admin Interface</h2>
+            <div id="battery-levels" class="text-lg mb-4">Battery Levels: Loading...</div>
+            <div class="space-x-4">
+                <button class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-700" onclick="sendCommand('land')">Land</button>
+                <button class="bg-black text-white px-4 py-2 rounded hover:bg-black" onclick="sendCommand('emergency')">Kill</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let adminMode = false;
+
+        function sendCommand(command) {
+            fetch('/command/' + command)
+                .catch(error => console.error('Error:', error));
+        }
+
+        function move(direction) {
+            fetch('/move/' + direction)
+                .catch(error => console.error('Error:', error));
+        }
+
+        function flip(direction) {
+            fetch('/flip/' + direction)
+                .catch(error => console.error('Error:', error));
+        }
+
+        function updateBatteryLevel() {
+            fetch('/command/battery')
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById('battery-levels').innerText = `Battery Levels: ${data}`;
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        function startBatteryUpdate() {
+            updateBatteryLevel(); // Update immediately
+            setInterval(updateBatteryLevel, 5000); // Update every 5 seconds
+        }
+
+        document.addEventListener('keydown', function(event) {
+            if (event.key === '.' && event.ctrlKey) {
+                adminMode = !adminMode;
+                document.getElementById('default-interface').classList.toggle('hidden', adminMode);
+                document.getElementById('admin-interface').classList.toggle('hidden', !adminMode);
+                if (adminMode) {
+                    startBatteryUpdate(); // Start updating battery levels in admin mode
+                }
+            }
+
+            if (!adminMode) {
+                switch(event.key) {
+                    case 'ArrowUp':
+                        move('up');
+                        break;
+                    case 'ArrowDown':
+                        move('down');
+                        break;
+                    case 'ArrowLeft':
+                        move('left');
+                        break;
+                    case 'ArrowRight':
+                        move('right');
+                        break;
+                    case 'w':
+                        move('forward');
+                        break;
+                    case 's':
+                        move('back');
+                        break;
+                    case 'r':
+                        sendCommand('takeoff');
+                        break;
+                    case 'l':
+                        sendCommand('land');
+                        break;
+                    case 'e':
+                        sendCommand('emergency');
+                        break;
+                    case 'f':
+                        flip('right');
+                        break;
+                    case 'g':
+                        flip('left');
+                        break;
+                    default:
+                        break;
+                }
+            }
+        });
+    </script>
+</body>
+</html>
